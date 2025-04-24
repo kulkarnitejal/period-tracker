@@ -1,12 +1,12 @@
-import React, { useState, useMemo } from 'react';
-import { View, StyleSheet, Text } from 'react-native';
+import React, { useState, useMemo, useRef } from 'react';
+import { View, StyleSheet, Text, TouchableOpacity } from 'react-native';
 import { Calendar, DateData } from 'react-native-calendars';
 import { addDays, format, differenceInDays, isBefore, isAfter } from 'date-fns';
-import { Button, IconButton, TextInput } from 'react-native-paper';
+import { FAB } from 'react-native-paper';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { theme, colors } from '../theme/colors';
 
 const CYCLE_LENGTH = 28;
-const OVULATION_START = 12; // Days after period start
 const OVULATION_LENGTH = 3;
 const DEFAULT_PERIOD_LENGTH = 7;
 const PREDICTION_CYCLES = 24; // Show predictions for 2 years (24 cycles)
@@ -16,13 +16,26 @@ export const PeriodTrackingScreen = () => {
   const [periodLength, setPeriodLength] = useState(DEFAULT_PERIOD_LENGTH);
   const [isEditMode, setIsEditMode] = useState(false);
   const [customPeriodDays, setCustomPeriodDays] = useState<string[]>([]);
+  const [currentDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+  const [currentViewDate, setCurrentViewDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+
+  // Calculate ovulation start (5 days after period ends)
+  const getOvulationStart = (periodStartDate: Date, periodDuration: number) => {
+    return addDays(periodStartDate, periodDuration + 5);
+  };
 
   const markedDates = useMemo(() => {
-    if (!selectedDate) return {};
+    if (!selectedDate) return { [currentDate]: { marked: true, dotColor: colors.earth } };
 
     const dates: any = {};
     const startDate = new Date(selectedDate);
     const today = new Date();
+
+    // Add today's date marker
+    dates[currentDate] = {
+      marked: true,
+      dotColor: colors.earth,
+    };
 
     if (isEditMode) {
       // In edit mode, show only manually selected days
@@ -60,11 +73,9 @@ export const PeriodTrackingScreen = () => {
 
         // Add ovulation days only for the next cycle
         if (cycle === 1) {
+          const ovulationStart = getOvulationStart(cycleStartDate, periodLength);
           for (let i = 0; i < OVULATION_LENGTH; i++) {
-            const ovulationDate = format(
-              addDays(cycleStartDate, OVULATION_START + i),
-              'yyyy-MM-dd'
-            );
+            const ovulationDate = format(addDays(ovulationStart, i), 'yyyy-MM-dd');
             dates[ovulationDate] = {
               selected: true,
               selectedColor: colors.ovulationDay,
@@ -75,11 +86,9 @@ export const PeriodTrackingScreen = () => {
       }
 
       // Mark current cycle ovulation days
+      const currentOvulationStart = getOvulationStart(startDate, periodLength);
       for (let i = 0; i < OVULATION_LENGTH; i++) {
-        const ovulationDate = format(
-          addDays(startDate, OVULATION_START + i),
-          'yyyy-MM-dd'
-        );
+        const ovulationDate = format(addDays(currentOvulationStart, i), 'yyyy-MM-dd');
         dates[ovulationDate] = {
           selected: true,
           selectedColor: colors.ovulationDay,
@@ -89,7 +98,7 @@ export const PeriodTrackingScreen = () => {
     }
 
     return dates;
-  }, [selectedDate, periodLength, isEditMode, customPeriodDays]);
+  }, [selectedDate, periodLength, isEditMode, customPeriodDays, currentDate]);
 
   const handleDayPress = (day: DateData) => {
     if (isEditMode) {
@@ -134,7 +143,7 @@ export const PeriodTrackingScreen = () => {
 
   const getOvulationDates = () => {
     if (!selectedDate) return null;
-    const ovulationStart = addDays(new Date(selectedDate), OVULATION_START);
+    const ovulationStart = getOvulationStart(new Date(selectedDate), periodLength);
     const ovulationEnd = addDays(ovulationStart, OVULATION_LENGTH - 1);
     return `${format(ovulationStart, 'MMMM dd')} - ${format(ovulationEnd, 'MMMM dd, yyyy')}`;
   };
@@ -150,119 +159,159 @@ export const PeriodTrackingScreen = () => {
     }`;
   };
 
+  const handleTodayPress = () => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    setCurrentViewDate(today);
+  };
+
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Period Tracker</Text>
-        <Button
-          mode="contained"
-          onPress={toggleEditMode}
-          style={styles.editButton}
-          buttonColor={isEditMode ? colors.earth : colors.clay}
-        >
-          {isEditMode ? 'Save Changes' : 'Edit Period Days'}
-        </Button>
-      </View>
+    <SafeAreaView style={styles.safeArea} edges={['top']}>
+      <View style={styles.container}>
+        <Text style={styles.title}>Tracking</Text>
 
-      {!isEditMode && (
-        <View style={styles.periodLengthContainer}>
-          <Text style={styles.periodLengthLabel}>Period Duration: {periodLength} days</Text>
-        </View>
-      )}
-
-      {isEditMode && (
-        <View style={styles.editModeInfo}>
-          <Text style={styles.editModeText}>
-            Tap days to select/unselect your period days
-          </Text>
-          <Text style={styles.editModeText}>
-            Selected: {customPeriodDays.length} days
-          </Text>
-        </View>
-      )}
-
-      <Calendar
-        onDayPress={handleDayPress}
-        markedDates={markedDates}
-        theme={{
-          backgroundColor: colors.background,
-          calendarBackground: colors.surface,
-          textSectionTitleColor: colors.textPrimary,
-          selectedDayBackgroundColor: colors.selectedDay,
-          selectedDayTextColor: colors.surface,
-          todayTextColor: colors.earth,
-          dayTextColor: colors.textPrimary,
-          textDisabledColor: colors.neutral300,
-          arrowColor: colors.earth,
-          monthTextColor: colors.textPrimary,
-        }}
-        // Enable future months scrolling
-        enableSwipeMonths={true}
-        // Show 24 months in advance
-        maxDate={format(addDays(new Date(), 730), 'yyyy-MM-dd')}
-      />
-      
-      <View style={styles.infoContainer}>
-        {selectedDate && (
-          <>
-            <Text style={styles.infoText}>
-              Period: {getPeriodDates()}
-            </Text>
-            {!isEditMode && (
-              <>
-                <Text style={styles.infoText}>
-                  Ovulation Window: {getOvulationDates()}
-                </Text>
-                <Text style={styles.infoText}>
-                  Next Period Expected: {getNextPeriodDate()}
-                </Text>
-              </>
-            )}
-          </>
-        )}
-      </View>
-
-      <View style={styles.legend}>
-        <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: colors.periodDay }]} />
-          <Text style={styles.legendText}>Current Period</Text>
-        </View>
         {!isEditMode && (
-          <>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: colors.predictedPeriodDay }]} />
-              <Text style={styles.legendText}>Predicted Period</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View style={[styles.legendDot, { backgroundColor: colors.ovulationDay }]} />
-              <Text style={styles.legendText}>Ovulation</Text>
-            </View>
-          </>
+          <View style={styles.periodLengthContainer}>
+            <Text style={styles.periodLengthLabel}>Period Duration: {periodLength} days</Text>
+          </View>
         )}
+
+        <View style={styles.calendarContainer}>
+          {isEditMode && (
+            <View style={styles.editModeInfo}>
+              <Text style={styles.editModeText}>
+                Tap days to select/unselect your period days
+              </Text>
+              <Text style={styles.editModeText}>
+                Selected: {customPeriodDays.length} days
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.calendarHeader}>
+            <TouchableOpacity
+              style={styles.todayButton}
+              onPress={handleTodayPress}
+            >
+              <Text style={styles.todayButtonText}>Today</Text>
+            </TouchableOpacity>
+          </View>
+
+          <Calendar
+            current={currentViewDate}
+            initialDate={currentViewDate}
+            key={currentViewDate}
+            onDayPress={handleDayPress}
+            onMonthChange={(date: DateData) => setCurrentViewDate(date.dateString)}
+            markedDates={markedDates}
+            theme={{
+              backgroundColor: colors.background,
+              calendarBackground: colors.surface,
+              textSectionTitleColor: colors.textPrimary,
+              selectedDayBackgroundColor: colors.selectedDay,
+              selectedDayTextColor: colors.surface,
+              todayTextColor: colors.earth,
+              todayBackgroundColor: colors.neutral100,
+              dayTextColor: colors.textPrimary,
+              textDisabledColor: colors.neutral300,
+              arrowColor: colors.earth,
+              monthTextColor: colors.textPrimary,
+            }}
+            enableSwipeMonths={true}
+            maxDate={format(addDays(new Date(), 730), 'yyyy-MM-dd')}
+          />
+
+          <View style={styles.fabSpacing} />
+
+          <FAB
+            icon={isEditMode ? "check" : "pencil"}
+            onPress={toggleEditMode}
+            style={[styles.fab, { backgroundColor: isEditMode ? colors.earth : colors.clay }]}
+            color={colors.surface}
+            size="small"
+            label={isEditMode ? "Save" : "Edit"}
+          />
+        </View>
+        
+        <View style={styles.infoContainer}>
+          {selectedDate && (
+            <>
+              <Text style={styles.infoText}>
+                Period: {getPeriodDates()}
+              </Text>
+              {!isEditMode && (
+                <>
+                  <Text style={styles.infoText}>
+                    Ovulation Window: {getOvulationDates()}
+                  </Text>
+                  <Text style={styles.infoText}>
+                    Next Period Expected: {getNextPeriodDate()}
+                  </Text>
+                </>
+              )}
+            </>
+          )}
+        </View>
+
+        <View style={styles.legend}>
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: colors.periodDay }]} />
+            <Text style={styles.legendText}>Current Period</Text>
+          </View>
+          {!isEditMode && (
+            <>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: colors.predictedPeriodDay }]} />
+                <Text style={styles.legendText}>Predicted Period</Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View style={[styles.legendDot, { backgroundColor: colors.ovulationDay }]} />
+                <Text style={styles.legendText}>Ovulation</Text>
+              </View>
+            </>
+          )}
+        </View>
       </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: colors.background,
-    padding: theme.spacing.md,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: theme.spacing.md,
+  container: {
+    flex: 1,
+    padding: theme.spacing.md,
   },
   title: {
     fontSize: 24,
     fontWeight: '600',
     color: colors.textPrimary,
+    marginBottom: theme.spacing.md,
   },
-  editButton: {
+  calendarContainer: {
+    backgroundColor: colors.surface,
     borderRadius: theme.borderRadius.md,
+    padding: theme.spacing.md,
+    marginBottom: theme.spacing.md,
+    position: 'relative',
+  },
+  fabSpacing: {
+    height: 28, // Provides space for the FAB
+  },
+  fab: {
+    position: 'absolute',
+    right: theme.spacing.md,
+    bottom: theme.spacing.sm,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   periodLengthContainer: {
     backgroundColor: colors.surface,
@@ -275,10 +324,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   editModeInfo: {
-    backgroundColor: colors.surface,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.md,
-    marginBottom: theme.spacing.md,
+    marginBottom: theme.spacing.sm,
   },
   editModeText: {
     color: colors.textPrimary,
@@ -289,7 +335,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     padding: theme.spacing.md,
     borderRadius: theme.borderRadius.md,
-    marginTop: theme.spacing.lg,
+    marginBottom: theme.spacing.md,
   },
   infoText: {
     color: colors.textPrimary,
@@ -299,7 +345,6 @@ const styles = StyleSheet.create({
   legend: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: theme.spacing.lg,
     padding: theme.spacing.md,
     backgroundColor: colors.surface,
     borderRadius: theme.borderRadius.md,
@@ -317,5 +362,21 @@ const styles = StyleSheet.create({
   legendText: {
     color: colors.textSecondary,
     fontSize: 14,
+  },
+  calendarHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingBottom: theme.spacing.sm,
+  },
+  todayButton: {
+    backgroundColor: colors.earth,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.xs,
+    borderRadius: theme.borderRadius.sm,
+  },
+  todayButtonText: {
+    color: colors.surface,
+    fontSize: 14,
+    fontWeight: '500',
   },
 }); 

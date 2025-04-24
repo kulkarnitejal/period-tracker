@@ -1,20 +1,14 @@
-import { StatusBar } from 'expo-status-bar';
-import { SafeAreaView, StyleSheet } from 'react-native';
-import { PeriodTrackingScreen } from './src/screens/PeriodTrackingScreen';
-import { colors } from './src/theme/colors';
+import React from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { BottomTabs } from './src/navigation/BottomTabs';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 export default function App() {
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar style="auto" />
-      <PeriodTrackingScreen />
-    </SafeAreaView>
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <BottomTabs />
+      </NavigationContainer>
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-});

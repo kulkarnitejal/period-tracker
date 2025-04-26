@@ -230,36 +230,10 @@ export const PeriodTrackingScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <View style={styles.container}>
-        <Text style={styles.title}>Tracking</Text>
-
-        {!isEditMode && (
-          <View style={styles.periodLengthContainer}>
-            <View style={styles.periodLengthIconContainer}>
-              <View style={styles.periodLengthIcon} />
-            </View>
-            <Text style={styles.periodLengthLabel}>Period Duration: {periodLength} days</Text>
-          </View>
-        )}
+        <Text style={styles.title}>Calendar</Text>
 
         <View style={styles.calendarContainer}>
-          {isEditMode ? (
-            <View style={styles.editModeInfo}>
-              <Text style={styles.editModeText}>
-                Tap days to select/unselect your period days
-              </Text>
-              <Text style={styles.editModeText}>
-                Selected: {customPeriodDays.length} days
-              </Text>
-            </View>
-          ) : (
-            selectedDate === null && (
-              <View style={styles.editModeInfo}>
-                <Text style={styles.editModeText}>
-                  Tap the "Edit" button to add your period days
-                </Text>
-              </View>
-            )
-          )}
+    
 
           <Calendar
             current={currentViewDate}
@@ -286,12 +260,12 @@ export const PeriodTrackingScreen = () => {
               textMonthFontWeight: '600',
               textDayHeaderFontWeight: '600',
               textDayHeaderFontSize: 13,
+              // Remove special styling for Sunday and Saturday to make all days of week uniform
               'stylesheet.calendar.header': {
-                dayTextAtIndex0: {
-                  color: theme.colors.terracotta
-                },
-                dayTextAtIndex6: {
-                  color: theme.colors.terracotta
+                dayHeader: {
+                  color: theme.colors.moss,
+                  fontWeight: '600',
+                  fontSize: 13,
                 }
               },
               'stylesheet.day.basic': {
@@ -343,7 +317,7 @@ export const PeriodTrackingScreen = () => {
             style={[styles.fab, { backgroundColor: isEditMode ? theme.colors.earth : theme.colors.clay }]}
             color={theme.colors.surface}
             size="small"
-            label={isEditMode ? "Save" : "Edit Dates"}
+            label={isEditMode? "":""}
           />
         </View>
         
@@ -447,36 +421,6 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
-  },
-  periodLengthContainer: {
-    backgroundColor: theme.colors.surface,
-    padding: theme.spacing.md,
-    borderRadius: theme.borderRadius.lg,
-    marginBottom: theme.spacing.md,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: theme.colors.neutral500,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    borderLeftWidth: 4,
-    borderLeftColor: theme.colors.clay,
-  },
-  periodLengthIconContainer: {
-    marginRight: theme.spacing.md,
-  },
-  periodLengthIcon: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: theme.colors.periodDay,
-    opacity: 0.8,
-  },
-  periodLengthLabel: {
-    color: theme.colors.textPrimary,
-    fontSize: 16,
-    fontWeight: '500',
   },
   editModeInfo: {
     marginBottom: theme.spacing.sm,

@@ -1,6 +1,7 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { PeriodTrackingScreen } from '../screens/PeriodTrackingScreen';
+import { DashboardScreen } from '../screens/DashboardScreen';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/colors';
 
@@ -18,9 +19,19 @@ export const BottomTabs = () => {
         },
         headerShown: false,
       }}
+      initialRouteName="Dashboard"
     >
       <Tab.Screen
-        name="Tracking"
+        name="Dashboard"
+        component={DashboardScreen}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen
+        name="Calendar"
         component={PeriodTrackingScreen}
         options={{
           tabBarIcon: ({ color, size }) => (

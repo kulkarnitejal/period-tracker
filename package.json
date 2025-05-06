@@ -10,17 +10,17 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
-    "@react-navigation/bottom-tabs": "^7.3.10",
-    "@react-navigation/native": "^7.1.6",
+    "@react-navigation/bottom-tabs": "^7.3.12",
+    "@react-navigation/native": "^7.1.8",
     "date-fns": "^4.1.0",
-    "expo": "~52.0.46",
-    "expo-status-bar": "~2.0.1",
-    "react": "18.3.1",
-    "react-native": "0.76.9",
-    "react-native-calendars": "^1.1311.0",
-    "react-native-paper": "^5.13.3",
-    "react-native-safe-area-context": "^5.4.0",
-    "react-native-screens": "^4.10.0"
+    "expo": "~53.0.0",
+    "expo-status-bar": "~2.2.3",
+    "react": "19.0.0",
+    "react-native": "0.79.0",
+    "react-native-calendars": "^1.1312.0",
+    "react-native-paper": "^5.14.0",
+    "react-native-safe-area-context": "5.4.0",
+    "react-native-screens": "~4.10.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
@@ -9,86 +9,80 @@ import {
   Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { format, addDays, differenceInDays } from 'date-fns';
+import { format } from 'date-fns';
 import { Ionicons, FontAwesome5 } from '@expo/vector-icons';
 import { theme } from '../theme/colors';
 import { useNavigation, NavigationProp, ParamListBase } from '@react-navigation/native';
+import { usePeriodContext } from '../context/PeriodContext';
 
 const { width } = Dimensions.get('window');
 
+// Define valid FontAwesome5 icon types
+type FontAwesome5IconName = 
+  | 'tint'
+  | 'bed'
+  | 'running'
+  | 'utensils'
+  | 'bolt'
+  | 'spa'
+  | 'apple-alt'
+  | 'temperature-high'
+  | 'dumbbell'
+  | 'smile-beam'
+  | 'heartbeat'
+  | 'notes-medical'
+  | 'info-circle';
+
 export const DashboardScreen = () => {
   const navigation = useNavigation<NavigationProp<ParamListBase>>();
-  
-  // Mockup data - in a real app, this would come from the same state as PeriodTrackingScreen
-  const [cycleLength] = useState(28);
-  const [periodLength] = useState(7);
-  const [lastPeriodStartDate] = useState(new Date(2023, 3, 10)); // April 10, 2023
-  const [currentDate] = useState(new Date());
-  const [progress] = useState(new Animated.Value(0));
-  const [tips] = useState([
-    { icon: 'water', text: 'Stay hydrated', color: theme.colors.clay },
-    { icon: 'bed', text: 'Get extra rest', color: theme.colors.sage },
-    { icon: 'spa', text: 'Try meditation', color: theme.colors.earth },
-    { icon: 'utensils', text: 'Eat iron-rich foods', color: theme.colors.terracotta },
-  ]);
+  const {
+    cycleDay,
+    currentPhase,
+    nextPeriodDate,
+    ovulationDates,
+  } = usePeriodContext();
 
-  // Calculate cycle day
-  const daysSinceLastPeriod = differenceInDays(currentDate, lastPeriodStartDate);
-  const cycleDay = (daysSinceLastPeriod % cycleLength) + 1;
-  
-  // Calculate next period
-  const daysUntilNextPeriod = cycleLength - cycleDay;
-  const nextPeriodDate = addDays(currentDate, daysUntilNextPeriod);
-  
-  // Calculate fertility window (approximately days 11-17 of cycle)
-  const isFertileWindow = cycleDay >= 11 && cycleDay <= 17;
-  const isOvulationDay = cycleDay === 14;
-  const isPeriodActive = cycleDay <= periodLength;
+  const progress = React.useRef(new Animated.Value(0)).current;
 
-  // Calculate phase
-  const getCyclePhase = () => {
-    if (cycleDay <= periodLength) {
-      return {
-        name: 'Menstrual Phase',
-        color: theme.colors.periodDay,
-        description: 'Your period is active.'
-      };
-    } else if (cycleDay <= 10) {
-      return {
-        name: 'Follicular Phase',
-        color: theme.colors.sand,
-        description: 'Your body is preparing for ovulation.'
-      };
-    } else if (cycleDay <= 17) {
-      return {
-        name: 'Ovulatory Phase',
-        color: theme.colors.ovulationDay,
-        description: isOvulationDay ? 'You are ovulating today!' : 'You are in your fertility window.'
-      };
-    } else {
-      return {
-        name: 'Luteal Phase',
-        color: theme.colors.clay,
-        description: 'Your body is preparing for your next period.'
-      };
-    }
-  };
-
-  const phase = getCyclePhase();
-
-  // Animate progress
-  useEffect(() => {
+  // Animate progress when cycle day changes
+  React.useEffect(() => {
     Animated.timing(progress, {
-      toValue: cycleDay / cycleLength,
+      toValue: cycleDay / 28,
       duration: 1500,
       useNativeDriver: false,
     }).start();
-  }, []);
+  }, [cycleDay]);
 
   const progressInterpolate = progress.interpolate({
     inputRange: [0, 1],
     outputRange: ['0%', '100%'],
   });
+
+  // Helper function to determine icon based on tip content
+  const getTipIcon = (tip: string): FontAwesome5IconName => {
+    const tipLower = tip.toLowerCase();
+    if (tipLower.includes('hydrated') || tipLower.includes('water')) return 'tint';
+    if (tipLower.includes('rest') || tipLower.includes('sleep')) return 'bed';
+    if (tipLower.includes('exercise') || tipLower.includes('workout')) return 'running';
+    if (tipLower.includes('food') || tipLower.includes('eat')) return 'utensils';
+    if (tipLower.includes('energy')) return 'bolt';
+    if (tipLower.includes('meditation') || tipLower.includes('self-care')) return 'spa';
+    if (tipLower.includes('iron') || tipLower.includes('nutrition')) return 'apple-alt';
+    if (tipLower.includes('heat') || tipLower.includes('warm')) return 'temperature-high';
+    if (tipLower.includes('strength') || tipLower.includes('training')) return 'dumbbell';
+    if (tipLower.includes('skin') || tipLower.includes('beauty')) return 'smile-beam';
+    if (tipLower.includes('fertility')) return 'heartbeat';
+    if (tipLower.includes('pms') || tipLower.includes('symptoms')) return 'notes-medical';
+    return 'info-circle';
+  };
+
+  const tips = React.useMemo(() => {
+    return currentPhase.tips.slice(0, 4).map(tip => ({
+      text: tip,
+      icon: getTipIcon(tip),
+      color: currentPhase.color,
+    }));
+  }, [currentPhase]);
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
@@ -104,23 +98,20 @@ export const DashboardScreen = () => {
         </View>
 
         {/* Current Phase Card */}
-        <View style={[styles.phaseCard, { borderLeftColor: phase.color }]}>
+        <View style={[styles.phaseCard, { borderLeftColor: currentPhase.color }]}>
           <View style={styles.phaseCardContent}>
             <View style={styles.phaseTextContainer}>
-              <Text style={styles.greetingText}>
-                Hi there, today is cycle day {cycleDay}
-              </Text>
-              <Text style={styles.phaseTitle}>{phase.name}</Text>
-              <Text style={styles.phaseDescription}>{phase.description}</Text>
+              <Text style={styles.phaseTitle}>{currentPhase.name}</Text>
+              <Text style={styles.phaseDescription}>{currentPhase.description}</Text>
             </View>
             <View 
               style={[
                 styles.phaseIconContainer, 
-                { backgroundColor: phase.color }
+                { backgroundColor: currentPhase.color }
               ]}
             >
               <Ionicons 
-                name={isPeriodActive ? "water" : isFertileWindow ? "flower" : "leaf"} 
+                name={getPhaseIcon(currentPhase.name)}
                 size={32} 
                 color={theme.colors.surface} 
               />
@@ -131,14 +122,17 @@ export const DashboardScreen = () => {
         {/* Cycle Progress */}
         <View style={styles.cycleProgressCard}>
           <Text style={styles.cycleProgressTitle}>
-            Cycle Day {cycleDay} of {cycleLength}
+            Cycle Day {cycleDay} of 28
           </Text>
           
           <View style={styles.progressBarContainer}>
             <Animated.View 
               style={[
                 styles.progressBar, 
-                { width: progressInterpolate, backgroundColor: phase.color }
+                { 
+                  width: progressInterpolate,
+                  backgroundColor: currentPhase.color 
+                }
               ]} 
             />
           </View>
@@ -167,39 +161,27 @@ export const DashboardScreen = () => {
           </View>
 
           <View style={styles.upcomingEventContent}>
-            {daysUntilNextPeriod <= 7 ? (
+            {nextPeriodDate ? (
               <>
-                <Text style={styles.upcomingEventTitle}>Period in {daysUntilNextPeriod} days</Text>
-                <Text style={styles.upcomingEventDate}>
-                  Expected on {format(nextPeriodDate, 'MMMM dd, yyyy')}
+                <Text style={styles.upcomingEventTitle}>
+                  Period in {Math.max(28 - cycleDay, 0)} days
                 </Text>
-              </>
-            ) : isOvulationDay ? (
-              <>
-                <Text style={styles.upcomingEventTitle}>You are ovulating today</Text>
                 <Text style={styles.upcomingEventDate}>
-                  Your fertility is at its peak
-                </Text>
-              </>
-            ) : isFertileWindow ? (
-              <>
-                <Text style={styles.upcomingEventTitle}>Fertile Window</Text>
-                <Text style={styles.upcomingEventDate}>
-                  You're in your fertility window
+                  Expected on {format(new Date(nextPeriodDate), 'MMMM dd, yyyy')}
                 </Text>
               </>
             ) : (
-              <>
-                <Text style={styles.upcomingEventTitle}>Period in {daysUntilNextPeriod} days</Text>
-                <Text style={styles.upcomingEventDate}>
-                  Expected on {format(nextPeriodDate, 'MMMM dd, yyyy')}
-                </Text>
-              </>
+              <Text style={styles.upcomingEventTitle}>
+                Set your period start date in Calendar
+              </Text>
             )}
           </View>
 
-          <TouchableOpacity style={styles.actionButton}>
-            <Text style={styles.actionButtonText}>Log Symptoms</Text>
+          <TouchableOpacity 
+            style={styles.actionButton}
+            onPress={() => navigation.navigate('Calendar')}
+          >
+            <Text style={styles.actionButtonText}>Update Calendar</Text>
           </TouchableOpacity>
         </View>
 
@@ -247,6 +229,22 @@ export const DashboardScreen = () => {
       </ScrollView>
     </SafeAreaView>
   );
+};
+
+// Helper function to get phase icon
+const getPhaseIcon = (phaseName: string): keyof typeof Ionicons.glyphMap => {
+  switch (phaseName) {
+    case 'Menstrual Phase':
+      return 'water-outline';
+    case 'Follicular Phase':
+      return 'leaf-outline';
+    case 'Ovulatory Phase':
+      return 'sunny-outline';
+    case 'Luteal Phase':
+      return 'moon-outline';
+    default:
+      return 'information-circle-outline';
+  }
 };
 
 const styles = StyleSheet.create({
